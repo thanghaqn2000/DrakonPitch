@@ -118,7 +118,7 @@
 
     const label = document.createElement("label");
     label.className = "orcatune-label";
-    label.textContent = "OrcaTune Tone";
+    label.textContent = "DrakonPitch — tone";
 
     slider = document.createElement("input");
     slider.type = "range";

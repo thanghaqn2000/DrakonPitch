@@ -36,7 +36,7 @@ async function injectOrcaTune(tabId) {
         if (document.getElementById("orcatune-injected-badge")) return true;
         const badge = document.createElement("div");
         badge.id = "orcatune-injected-badge";
-        badge.textContent = "OrcaTune injected";
+        badge.textContent = "DrakonPitch injected";
         badge.style.position = "fixed";
         badge.style.left = "12px";
         badge.style.bottom = "12px";
@@ -54,7 +54,7 @@ async function injectOrcaTune(tabId) {
     });
     return true;
   } catch (error) {
-    console.error("OrcaTune inject failed:", error);
+    console.error("DrakonPitch inject failed:", error);
     return false;
   }
 }

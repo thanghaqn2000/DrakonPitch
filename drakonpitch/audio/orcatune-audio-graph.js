@@ -10,7 +10,7 @@
     const base = window.__orcaTuneRuntimeBaseUrl;
     if (base) return `${base}${path}`;
 
-    throw new Error("OrcaTune runtime URL is unavailable");
+    throw new Error("DrakonPitch runtime URL is unavailable");
   }
 
   class OrcaTuneAudioGraph {
@@ -68,7 +68,7 @@
 
       this.workletNode.port.onmessage = (event) => {
         if (event?.data?.type === "error") {
-          console.error("OrcaTune worklet error:", event.data.message);
+          console.error("DrakonPitch worklet error:", event.data.message);
           this.emergencyBypass();
         }
       };
@@ -154,7 +154,7 @@
           this.workletNode.port.postMessage({ type: "setTone", semitones });
         }
       } catch (error) {
-        console.error("OrcaTune setTone failed:", error);
+        console.error("DrakonPitch setTone failed:", error);
         this.emergencyBypass();
       }
     }
