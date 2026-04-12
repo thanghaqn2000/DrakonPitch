@@ -1,0 +1,33 @@
+CMakeFiles/orcatune_wasm.dir/Users/ducthang/Documents/my_personal/personal_project/PitchShift/modules/Bungee/submodules/kissfft/kiss_fftr.c.o: \
+  /Users/ducthang/Documents/my_personal/personal_project/PitchShift/modules/Bungee/submodules/kissfft/kiss_fftr.c \
+  /Users/ducthang/Documents/my_personal/personal_project/PitchShift/modules/Bungee/submodules/kissfft/kiss_fftr.h \
+  /Users/ducthang/Documents/my_personal/personal_project/PitchShift/modules/Bungee/submodules/kissfft/kiss_fft.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/cache/sysroot/include/compat/stdlib.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/cache/sysroot/include/stdlib.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/cache/sysroot/include/features.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/cache/sysroot/include/bits/alltypes.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/cache/sysroot/include/alloca.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/cache/sysroot/include/stdio.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/cache/sysroot/include/wasi/api.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/llvm/lib/clang/23/include/stddef.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/cache/sysroot/include/stddef.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/llvm/lib/clang/23/include/__stddef_header_macro.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/llvm/lib/clang/23/include/__stddef_ptrdiff_t.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/llvm/lib/clang/23/include/__stddef_size_t.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/llvm/lib/clang/23/include/__stddef_wchar_t.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/llvm/lib/clang/23/include/__stddef_null.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/llvm/lib/clang/23/include/__stddef_max_align_t.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/llvm/lib/clang/23/include/__stddef_offsetof.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/llvm/lib/clang/23/include/stdint.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/cache/sysroot/include/stdint.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/cache/sysroot/include/bits/stdint.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/cache/sysroot/include/compat/math.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/cache/sysroot/include/math.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/cache/sysroot/include/compat/string.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/cache/sysroot/include/string.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/cache/sysroot/include/strings.h \
+  /Users/ducthang/Documents/my_personal/personal_project/PitchShift/modules/Bungee/submodules/kissfft/_kiss_fft_guts.h \
+  /Users/ducthang/Documents/my_personal/personal_project/PitchShift/modules/Bungee/submodules/kissfft/kiss_fft_log.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/llvm/lib/clang/23/include/limits.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/cache/sysroot/include/limits.h \
+  /opt/homebrew/Cellar/emscripten/5.0.5/libexec/cache/sysroot/include/bits/limits.h

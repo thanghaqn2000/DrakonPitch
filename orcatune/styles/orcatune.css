@@ -1,0 +1,53 @@
+#orcatune-root.orcatune-root {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  background: rgba(15, 15, 15, 0.75);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#orcatune-root.orcatune-root.orcatune-floating {
+  position: fixed;
+  top: 72px !important;
+  right: 12px !important;
+  width: 360px !important;
+  max-width: calc(100vw - 24px);
+  z-index: 2147483647 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(121, 226, 133, 0.45);
+}
+
+.orcatune-label {
+  color: #f1f1f1;
+  font-size: 13px;
+  min-width: 96px;
+}
+
+.orcatune-slider {
+  flex: 1;
+}
+
+.orcatune-value {
+  color: #f1f1f1;
+  font-size: 12px;
+  min-width: 52px;
+  text-align: right;
+}
+
+.orcatune-reset-btn {
+  border: 1px solid rgba(121, 226, 133, 0.55);
+  background: rgba(121, 226, 133, 0.14);
+  color: #e9ffe8;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+.orcatune-reset-btn:hover {
+  background: rgba(121, 226, 133, 0.25);
+}
