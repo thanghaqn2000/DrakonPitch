@@ -1,22 +1,22 @@
 {
   "manifest_version": 3,
-  "name": "DrakonPitch",
-  "description": "Chỉnh cao độ (tone) âm thanh YouTube trực tiếp trên trình duyệt — Bungee WASM.",
+  "name": "Drakon Pitch",
+  "description": "Shift the pitch (tone) of YouTube audio in the tab you’re watching.",
   "version": "0.1.0",
   "icons": {
-    "16": "assets/drakon-logo-offcial.png",
-    "32": "assets/drakon-logo-offcial.png",
-    "48": "assets/drakon-logo-offcial.png",
-    "128": "assets/drakon-logo-offcial.png"
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "DrakonPitch",
+    "default_title": "Drakon Pitch",
     "default_popup": "popup/popup.html",
     "default_icon": {
-      "16": "assets/drakon-logo-offcial.png",
-      "32": "assets/drakon-logo-offcial.png",
-      "48": "assets/drakon-logo-offcial.png",
-      "128": "assets/drakon-logo-offcial.png"
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
     }
   },
   "background": {
