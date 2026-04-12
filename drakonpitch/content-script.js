@@ -1,4 +1,4 @@
-(function initOrcaTuneUI() {
+(function initDrakonPitch() {
   if (!window.__orcaTuneRuntimeBaseUrl) {
     const runtime = (typeof chrome !== "undefined" && chrome.runtime) || (typeof browser !== "undefined" && browser.runtime);
     if (runtime?.getURL) {
@@ -6,12 +6,7 @@
     }
   }
 
-  const ROOT_ID = "orcatune-root";
-  let observer = null;
-  let slider = null;
-  let valueText = null;
-  let lastMiniPrimary = undefined;
-  let rebindGeneration = 0;
+  let currentTone = 0;
 
   function isMiniPlayerVisible() {
     const mini = document.querySelector("ytd-miniplayer");
@@ -55,133 +50,84 @@
     return active || rest[0] || null;
   }
 
-  function findContainer() {
-    return (
-      document.querySelector("#above-the-fold #title") ||
-      document.querySelector("#info") ||
-      document.querySelector("ytd-watch-metadata") ||
-      document.body
-    );
-  }
-
   async function syncGraphAndTone(video, semitones) {
-    if (!video || !window.__orcaTuneAudioGraph) return;
+    if (!window.__orcaTuneAudioGraph) return;
     const graph = window.__orcaTuneAudioGraph;
 
-    // Explicit activation: only allow audio capture after user sets a non-zero tone.
-    // This is the primary guard; graph._activated is the secondary hard gate.
     if (semitones !== 0) graph._activated = true;
+    if (!video) return;
     if (!graph._activated) return;
 
-    const nowMiniPrimary = isInsideMiniPlayer(video);
-    const miniFlipped =
-      lastMiniPrimary !== undefined && lastMiniPrimary !== nowMiniPrimary;
-    lastMiniPrimary = nowMiniPrimary;
     const videoChanged = graph.video != null && graph.video !== video;
-    // MediaElementSource connection survives DOM moves (mini↔full with same element).
-    // Only force-reconnect when the video element reference actually changes.
-    const forceReconnect = videoChanged;
-    await graph.ensureGraph(video, { forceReconnect });
+
+    await graph.ensureGraph(video, { forceReconnect: videoChanged });
     await graph.setTone(semitones);
     await graph.resumeAudioContext();
   }
 
-  async function onSliderInput(event) {
-    const value = Number(event.target.value);
-    await syncGraphAndTone(findVideo(), value);
+  async function applyTone(semitones) {
+    if (!window.__orcaTuneAudioGraph) {
+      throw new Error("Audio engine not ready");
+    }
+    await syncGraphAndTone(findVideo(), semitones);
+    currentTone = semitones;
   }
 
-  async function applyCurrentToneToCurrentVideo() {
-    if (!slider) return;
-    await syncGraphAndTone(findVideo(), Number(slider.value));
+  let rebindDebounceTimer = null;
+  async function rebindIfVideoSwapped() {
+    const graph = window.__orcaTuneAudioGraph;
+    if (!graph || !graph._activated) return;
+    const video = findVideo();
+    if (!video || graph.video === video) return;
+    await syncGraphAndTone(video, currentTone);
   }
 
-  function updateValueLabel() {
-    if (!slider || !valueText) return;
-    valueText.textContent = `${Number(slider.value).toFixed(1)} st`;
+  function scheduleVideoRebindCheck() {
+    clearTimeout(rebindDebounceTimer);
+    rebindDebounceTimer = setTimeout(() => {
+      rebindIfVideoSwapped().catch(() => {});
+    }, 120);
   }
 
-  async function resetTone() {
-    if (!slider) return;
-    slider.value = "0";
-    updateValueLabel();
-    await syncGraphAndTone(findVideo(), 0);
-  }
+  setInterval(() => {
+    rebindIfVideoSwapped().catch(() => {});
+  }, 450);
 
-  function render() {
-    const existed = document.getElementById(ROOT_ID);
-    if (existed) return;
+  window.addEventListener("yt-navigate-finish", scheduleVideoRebindCheck);
+  document.addEventListener("yt-page-data-updated", scheduleVideoRebindCheck);
 
-    const root = document.createElement("div");
-    root.id = ROOT_ID;
-    root.className = "orcatune-root";
-
-    const label = document.createElement("label");
-    label.className = "orcatune-label";
-    label.textContent = "Drakon Pitch — tone";
-
-    slider = document.createElement("input");
-    slider.type = "range";
-    slider.min = "-12";
-    slider.max = "12";
-    slider.step = "0.5";
-    slider.value = "0";
-    slider.className = "orcatune-slider";
-    slider.addEventListener("input", onSliderInput);
-
-    valueText = document.createElement("span");
-    valueText.className = "orcatune-value";
-    valueText.textContent = "0.0 st";
-
-    slider.addEventListener("input", updateValueLabel);
-
-    const resetBtn = document.createElement("button");
-    resetBtn.type = "button";
-    resetBtn.className = "orcatune-reset-btn";
-    resetBtn.textContent = "Reset";
-    resetBtn.addEventListener("click", resetTone);
-
-    root.appendChild(label);
-    root.appendChild(slider);
-    root.appendChild(valueText);
-    root.appendChild(resetBtn);
-
-    root.classList.add("orcatune-floating");
-    document.documentElement.appendChild(root);
-  }
-
-  let applyDebounceTimer = null;
-  function rebindForSpaNavigation() {
-    render();
-    const gen = ++rebindGeneration;
-    clearTimeout(applyDebounceTimer);
-    applyDebounceTimer = setTimeout(() => {
-      applyCurrentToneToCurrentVideo().catch(() => {});
-      [400, 900, 1600].forEach((delay) => {
-        setTimeout(() => {
-          if (gen !== rebindGeneration) return;
-          applyCurrentToneToCurrentVideo().catch(() => {});
-        }, delay);
-      });
-    }, 200);
-  }
-
-  let resizeApplyTimer = null;
-  function boot() {
-    render();
-    observer = new MutationObserver(() => rebindForSpaNavigation());
-    observer.observe(document.documentElement, { childList: true, subtree: true });
-    window.addEventListener("yt-navigate-finish", rebindForSpaNavigation);
-    document.addEventListener("yt-page-data-updated", rebindForSpaNavigation);
-    window.addEventListener("resize", () => {
-      clearTimeout(resizeApplyTimer);
-      resizeApplyTimer = setTimeout(() => applyCurrentToneToCurrentVideo().catch(() => {}), 350);
-    });
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden) return;
-      window.__orcaTuneAudioGraph?.resumeAudioContext?.().catch(() => {});
+  // Listen for messages from popup
+  const runtime = (typeof chrome !== "undefined" && chrome.runtime) || (typeof browser !== "undefined" && browser.runtime);
+  let setToneQueue = Promise.resolve();
+  if (runtime?.onMessage) {
+    runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+      if (msg?.type === "drakonpitch:set-tone") {
+        const semitones = Number(msg.tone ?? 0);
+        setToneQueue = setToneQueue
+          .catch(() => {})
+          .then(async () => {
+            try {
+              await applyTone(semitones);
+              sendResponse({ ok: true, tone: currentTone });
+            } catch (err) {
+              sendResponse({
+                ok: false,
+                error: String(err?.message != null ? err.message : err)
+              });
+            }
+          });
+        return true;
+      }
+      if (msg?.type === "drakonpitch:get-tone") {
+        sendResponse({ tone: currentTone });
+        return false;
+      }
     });
   }
 
-  boot();
+  // Resume audio context on visibility change
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return;
+    window.__orcaTuneAudioGraph?.resumeAudioContext?.().catch(() => {});
+  });
 })();
