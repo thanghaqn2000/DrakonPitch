@@ -7,6 +7,12 @@
   }
 
   let currentTone = 0;
+  let downshiftWarmupPromise = null;
+  function clampTone(n) {
+    const step = 0.5;
+    const rounded = Math.round(Number(n) / step) * step;
+    return Math.max(-6, Math.min(6, rounded));
+  }
 
   function isMiniPlayerVisible() {
     const mini = document.querySelector("ytd-miniplayer");
@@ -73,6 +79,32 @@
     currentTone = semitones;
   }
 
+  async function prepareDownshift() {
+    if (downshiftWarmupPromise) {
+      await downshiftWarmupPromise;
+      return;
+    }
+    downshiftWarmupPromise = (async () => {
+      if (!window.__orcaTuneAudioGraph) {
+        throw new Error("Audio graph unavailable");
+      }
+      // Hidden warmup: do not bind YouTube video/source yet, so user audio stays normal.
+      await window.__orcaTuneAudioGraph.prepareDownshiftWarmup();
+    })();
+    try {
+      await downshiftWarmupPromise;
+    } catch (err) {
+      downshiftWarmupPromise = null;
+      throw err;
+    }
+  }
+
+  function clearDownshiftWarmupState() {
+    downshiftWarmupPromise = null;
+  }
+
+  window.addEventListener("drakonpitch:warmup-reset", clearDownshiftWarmupState);
+
   let rebindDebounceTimer = null;
   async function rebindIfVideoSwapped() {
     const graph = window.__orcaTuneAudioGraph;
@@ -102,7 +134,7 @@
   if (runtime?.onMessage) {
     runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       if (msg?.type === "drakonpitch:set-tone") {
-        const semitones = Number(msg.tone ?? 0);
+        const semitones = clampTone(msg.tone ?? 0);
         setToneQueue = setToneQueue
           .catch(() => {})
           .then(async () => {
@@ -118,8 +150,24 @@
           });
         return true;
       }
+      if (msg?.type === "drakonpitch:prepare-downshift") {
+        setToneQueue = setToneQueue
+          .catch(() => {})
+          .then(async () => {
+            try {
+              await prepareDownshift();
+              sendResponse({ ok: true, prepared: downshiftWarmupPromise !== null, tone: currentTone });
+            } catch (err) {
+              sendResponse({
+                ok: false,
+                error: String(err?.message != null ? err.message : err)
+              });
+            }
+          });
+        return true;
+      }
       if (msg?.type === "drakonpitch:get-tone") {
-        sendResponse({ tone: currentTone });
+        sendResponse({ tone: currentTone, prepared: downshiftWarmupPromise !== null });
         return false;
       }
     });

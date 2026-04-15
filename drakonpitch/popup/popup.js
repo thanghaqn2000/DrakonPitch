@@ -8,11 +8,12 @@ if (slider && pitchMain) updateValueDisplay(slider.value);
 
 let activeTabId = null;
 let lastCommittedTone = clampTone(slider?.value ?? 0);
+let isPreparingDownshift = false;
 
 function clampTone(n) {
   const step = 0.5;
   const rounded = Math.round(Number(n) / step) * step;
-  return Math.max(-12, Math.min(12, rounded));
+  return Math.max(-6, Math.min(6, rounded));
 }
 
 function setBadge(mode) {
@@ -26,6 +27,9 @@ function setBadge(mode) {
   } else if (mode === "warn") {
     wasmBadge.textContent = "● STANDBY";
     wasmBadge.classList.add("warn");
+  } else if (mode === "loading") {
+    wasmBadge.textContent = "● LOADING";
+    wasmBadge.classList.add("standby");
   } else {
     wasmBadge.textContent = "● STANDBY";
     wasmBadge.classList.add("standby");
@@ -41,7 +45,7 @@ function updateValueDisplay(val) {
 }
 
 function sendToContent(type, payload = {}, callbacks = {}) {
-  const { onSuccess, onFailure } = callbacks;
+  const { onSuccess, onFailure, suppressActiveBadge = false } = callbacks;
   if (!activeTabId) {
     onFailure?.();
     return;
@@ -57,7 +61,9 @@ function sendToContent(type, payload = {}, callbacks = {}) {
       onFailure?.();
       return;
     }
-    setBadge("active");
+    if (!suppressActiveBadge) {
+      setBadge("active");
+    }
     if (resp?.tone !== undefined) {
       const t = clampTone(resp.tone);
       slider.value = String(t);
@@ -69,6 +75,7 @@ function sendToContent(type, payload = {}, callbacks = {}) {
 }
 
 function applyTone(raw) {
+  if (isPreparingDownshift) return;
   const prev = clampTone(slider.value);
   const tone = clampTone(raw);
   sendToContent("drakonpitch:set-tone", { tone }, {
@@ -80,6 +87,11 @@ function applyTone(raw) {
 }
 
 slider.addEventListener("input", () => {
+  if (isPreparingDownshift) {
+    slider.value = String(lastCommittedTone);
+    updateValueDisplay(lastCommittedTone);
+    return;
+  }
   const attempted = clampTone(slider.value);
   updateValueDisplay(attempted);
   sendToContent("drakonpitch:set-tone", { tone: attempted }, {
@@ -110,6 +122,24 @@ function setControlsEnabled(on) {
   });
 }
 
+function beginPrepareDownshiftLoop() {
+  isPreparingDownshift = true;
+  setBadge("loading");
+  setControlsEnabled(false);
+  sendToContent("drakonpitch:prepare-downshift", {}, {
+    suppressActiveBadge: true,
+    onSuccess: () => {
+      isPreparingDownshift = false;
+      setControlsEnabled(true);
+      setBadge("active");
+    },
+    onFailure: () => {
+      // Keep loading and retry; prewarm must complete before allowing controls.
+      setTimeout(beginPrepareDownshiftLoop, 650);
+    }
+  });
+}
+
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
   const tab = tabs?.[0];
   activeTabId = tab?.id ?? null;
@@ -121,7 +151,23 @@ chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     return;
   }
 
-  setBadge("youtube");
-  setControlsEnabled(true);
-  sendToContent("drakonpitch:get-tone");
+  isPreparingDownshift = true;
+  setBadge("loading");
+  setControlsEnabled(false);
+  sendToContent("drakonpitch:get-tone", {}, {
+    suppressActiveBadge: true,
+    onSuccess: (resp) => {
+      if (resp?.tone !== undefined) {
+        const t = clampTone(resp.tone);
+        slider.value = String(t);
+        updateValueDisplay(t);
+        lastCommittedTone = t;
+      }
+      beginPrepareDownshiftLoop();
+    },
+    onFailure: () => {
+      setBadge("warn");
+      setControlsEnabled(false);
+    }
+  });
 });

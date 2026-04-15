@@ -7,9 +7,8 @@ class OrcaTuneProcessor extends AudioWorkletProcessor {
     this.wasmUrl = processorOptions.wasmUrl;
     this.wasmJsUrl = processorOptions.wasmJsUrl;
 
-    this.toneSemitones = 0;
     this.toneTargetSemitones = 0;
-    this.toneSmoothingTimeSec = 0.06;
+    this.toneSmoothedSemitones = 0;
     this.ready = false;
     this.destroyed = false;
 
@@ -48,7 +47,7 @@ class OrcaTuneProcessor extends AudioWorkletProcessor {
         const regex = new RegExp(`Module\\["${escaped}"\\]\\s*=\\s*wasmExports\\["([^"]+)"\\]`);
         const m = jsText.match(regex);
         return m ? m[1] : null;
-      };
+      }; 
 
       const wasm = await WebAssembly.instantiate(wasmBytes, {
         a: {
@@ -93,7 +92,8 @@ class OrcaTuneProcessor extends AudioWorkletProcessor {
       const bytesPerBuffer = this.maxBlockSize * this.channels * 4;
       this.inPtr = this.fn.malloc(bytesPerBuffer);
       this.outPtr = this.fn.malloc(bytesPerBuffer);
-      this.fn.setSemitones(this.handle, this.toneSemitones);
+      this.fn.setSemitones(this.handle, this.toneTargetSemitones);
+      this.toneSmoothedSemitones = this.toneTargetSemitones;
       this.ready = true;
   }
 
@@ -125,9 +125,17 @@ class OrcaTuneProcessor extends AudioWorkletProcessor {
     const inOffset = this.inPtr >> 2;
     const outOffset = this.outPtr >> 2;
 
-    const smoothingAlpha = 1 - Math.exp(-frames / (sampleRate * this.toneSmoothingTimeSec));
-    this.toneSemitones += (this.toneTargetSemitones - this.toneSemitones) * smoothingAlpha;
-    this.fn.setSemitones(this.handle, this.toneSemitones);
+    // Pre-smooth the target on the JS side, slower when going down to reduce
+    // grain-rate artifacts from the phase vocoder.
+    const delta = this.toneTargetSemitones - this.toneSmoothedSemitones;
+    if (Math.abs(delta) > 0.001) {
+      const timeSec = delta < 0 ? 0.4 : 0.08;
+      const alpha = 1 - Math.exp(-frames / (sampleRate * timeSec));
+      this.toneSmoothedSemitones += delta * alpha;
+    } else {
+      this.toneSmoothedSemitones = this.toneTargetSemitones;
+    }
+    this.fn.setSemitones(this.handle, this.toneSmoothedSemitones);
 
     for (let n = 0; n < frames; n++) {
       for (let ch = 0; ch < channels; ch++) {
@@ -140,7 +148,7 @@ class OrcaTuneProcessor extends AudioWorkletProcessor {
     for (let n = 0; n < frames; n++) {
       for (let ch = 0; ch < channels; ch++) {
         const y = heapF32[outOffset + n * channels + ch];
-        output[ch][n] = Math.max(-0.98, Math.min(0.98, y));
+        output[ch][n] = Number.isFinite(y) ? y : 0;
       }
     }
 

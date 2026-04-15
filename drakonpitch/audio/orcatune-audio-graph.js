@@ -17,6 +17,7 @@
     constructor() {
       this.audioContext = null;
       this.workletNode = null;
+      this.outputGainNode = null;
       this.elementSourceNodeMap = new WeakMap();
       // Currently connected video + its source node
       this.video = null;
@@ -24,6 +25,8 @@
       this.currentTone = 0;
       this.wasmPayload = null;
       this._workletModuleLoaded = false;
+      this._downshiftPrepared = false;
+      this._downshiftPreparePromise = null;
       // Must be explicitly activated (user set non-zero tone) before any
       // audio capture happens. Prevents auto-capture on page load.
       this._activated = false;
@@ -62,8 +65,11 @@
         }
       });
 
+      this.outputGainNode = this.audioContext.createGain();
+      this.outputGainNode.gain.value = 1;
       try {
-        this.workletNode.connect(this.audioContext.destination);
+        this.workletNode.connect(this.outputGainNode);
+        this.outputGainNode.connect(this.audioContext.destination);
       } catch (_) {}
 
       this.workletNode.port.onmessage = (event) => {
@@ -80,6 +86,59 @@
         [copy]
       );
       this.workletNode.port.postMessage({ type: "setTone", semitones: this.currentTone });
+    }
+
+    _setMuted(muted) {
+      if (!this.outputGainNode || !this.audioContext) return;
+      const now = this.audioContext.currentTime;
+      const target = muted ? 0 : 1;
+      this.outputGainNode.gain.cancelScheduledValues(now);
+      this.outputGainNode.gain.setTargetAtTime(target, now, 0.01);
+    }
+
+    async prepareDownshiftWarmup() {
+      if (this._downshiftPrepared) return;
+      if (this._downshiftPreparePromise) {
+        await this._downshiftPreparePromise;
+        return;
+      }
+      this._downshiftPreparePromise = (async () => {
+        await this._initWorklet();
+        await this.audioContext.resume();
+
+        // Feed silent signal into worklet so DSP state warms without affecting user audio.
+        const source = this.audioContext.createConstantSource();
+        source.offset.value = 0;
+        source.connect(this.workletNode);
+        source.start();
+        this._setMuted(true);
+
+        try {
+          // Drive both cascaded smoothers (JS 400 ms + C++ 450 ms) to full convergence at -6.
+          // ~3500 ms covers WASM load time (~500 ms) + 99%+ cascade convergence (~2100 ms)
+          // with comfortable margin. Engine is intentionally LEFT at -6 after warmup so that
+          // every subsequent user-facing transition goes UPWARD (fast, artifact-free).
+          this.workletNode.port.postMessage({ type: "setTone", semitones: -6 });
+          await new Promise((resolve) => setTimeout(resolve, 3500));
+          // Do NOT reset to 0. Keeping target at -6 means any user tone ≥ -6
+          // causes an upward (clean) transition, never a downward one.
+          this._downshiftPrepared = true;
+        } finally {
+          this._setMuted(false);
+          try {
+            source.stop();
+          } catch (_) {}
+          try {
+            source.disconnect();
+          } catch (_) {}
+        }
+      })();
+
+      try {
+        await this._downshiftPreparePromise;
+      } finally {
+        this._downshiftPreparePromise = null;
+      }
     }
 
     // Only swap SourceNode. Never recreate the worklet.
@@ -122,7 +181,6 @@
         this._activeSource.connect(this.workletNode);
       } catch (_) {}
 
-      this.workletNode.port.postMessage({ type: "setTone", semitones: this.currentTone });
       return true;
     }
 
@@ -140,8 +198,12 @@
         if (this._activeSource) this._activeSource.disconnect();
       } catch (_) {}
       this.workletNode = null;
+      this.outputGainNode = null;
       this._activeSource = null;
       this.video = null;
+      this._downshiftPrepared = false;
+      this._downshiftPreparePromise = null;
+      window.dispatchEvent(new CustomEvent("drakonpitch:warmup-reset"));
     }
 
     async setTone(semitones) {
@@ -165,11 +227,18 @@
         this.workletNode.disconnect();
         this.workletNode = null;
       }
+      if (this.outputGainNode) {
+        this.outputGainNode.disconnect();
+        this.outputGainNode = null;
+      }
       if (this._activeSource) {
         this._activeSource.disconnect();
         this._activeSource = null;
       }
       this.video = null;
+      this._downshiftPrepared = false;
+      this._downshiftPreparePromise = null;
+      window.dispatchEvent(new CustomEvent("drakonpitch:warmup-reset"));
     }
   }
 
