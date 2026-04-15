@@ -30,28 +30,6 @@ async function injectOrcaTune(tabId) {
         "content-script.js"
       ]
     });
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      func: () => {
-        if (document.getElementById("orcatune-injected-badge")) return true;
-        const badge = document.createElement("div");
-        badge.id = "orcatune-injected-badge";
-        badge.textContent = "Drakon Pitch injected";
-        badge.style.position = "fixed";
-        badge.style.left = "12px";
-        badge.style.bottom = "12px";
-        badge.style.zIndex = "2147483647";
-        badge.style.background = "#1f7a39";
-        badge.style.color = "#fff";
-        badge.style.padding = "6px 10px";
-        badge.style.borderRadius = "8px";
-        badge.style.fontSize = "12px";
-        badge.style.fontFamily = "Arial, sans-serif";
-        document.documentElement.appendChild(badge);
-        setTimeout(() => badge.remove(), 2500);
-        return true;
-      }
-    });
     return true;
   } catch (error) {
     console.error("DrakonPitch inject failed:", error);
