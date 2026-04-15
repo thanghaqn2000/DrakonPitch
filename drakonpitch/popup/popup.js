@@ -1,14 +1,19 @@
 const slider = document.getElementById("pitchSlider");
 const pitchMain = document.getElementById("pitchMain");
 const resetBtn = document.getElementById("resetBtn");
+const downloadBtn = document.getElementById("downloadBtn");
 const wasmBadge = document.getElementById("wasmBadge");
 const nudgeBtns = document.querySelectorAll(".nudge");
+const exportOverlay = document.getElementById("exportOverlay");
 
 if (slider && pitchMain) updateValueDisplay(slider.value);
 
 let activeTabId = null;
 let lastCommittedTone = clampTone(slider?.value ?? 0);
 let isPreparingDownshift = false;
+let isExporting = false;
+let exportStatePendingAck = false;
+let isPageEligible = false;
 
 function clampTone(n) {
   const step = 0.5;
@@ -47,21 +52,26 @@ function updateValueDisplay(val) {
 function sendToContent(type, payload = {}, callbacks = {}) {
   const { onSuccess, onFailure, suppressActiveBadge = false } = callbacks;
   if (!activeTabId) {
+    console.error("[DrakonPitch][Popup] No active tab for message:", type);
     onFailure?.();
     return;
   }
+  console.log("[DrakonPitch][Popup] sendMessage ->", type, payload);
   chrome.tabs.sendMessage(activeTabId, { type, ...payload }, (resp) => {
     if (chrome.runtime.lastError) {
+      console.error("[DrakonPitch][Popup] sendMessage error:", type, chrome.runtime.lastError.message);
       setBadge("warn");
       onFailure?.();
       return;
     }
     if (resp?.ok === false) {
+      console.error("[DrakonPitch][Popup] response failed:", type, resp?.error);
       setBadge("warn");
       onFailure?.();
       return;
     }
-    if (!suppressActiveBadge) {
+    console.log("[DrakonPitch][Popup] response ok:", type, resp);
+    if (!suppressActiveBadge && !isExporting) {
       setBadge("active");
     }
     if (resp?.tone !== undefined) {
@@ -106,6 +116,33 @@ resetBtn.addEventListener("click", () => {
   applyTone(0);
 });
 
+if (downloadBtn) {
+  downloadBtn.addEventListener("click", () => {
+    if (isPreparingDownshift || isExporting) return;
+    const tone = clampTone(slider.value);
+    console.log("[DrakonPitch][Popup] Download requested, tone:", tone);
+    exportStatePendingAck = true;
+    pushExportState(true);
+    applyExportState(true);
+    sendToContent("drakonpitch:export-audio", { tone }, {
+      suppressActiveBadge: true,
+      onSuccess: () => {
+        console.log("[DrakonPitch][Popup] Download flow completed");
+        exportStatePendingAck = false;
+        applyExportState(false);
+        if (!isPreparingDownshift) setBadge("active");
+      },
+      onFailure: () => {
+        console.error("[DrakonPitch][Popup] Download flow failed");
+        exportStatePendingAck = false;
+        pushExportState(false);
+        applyExportState(false);
+        setBadge("warn");
+      }
+    });
+  });
+}
+
 nudgeBtns.forEach((btn) => {
   btn.addEventListener("click", () => {
     const delta = Number(btn.getAttribute("data-delta"));
@@ -114,9 +151,58 @@ nudgeBtns.forEach((btn) => {
   });
 });
 
+
+
+function setExportOverlayVisible(show) {
+  if (!exportOverlay) return;
+  exportOverlay.classList.toggle("hidden", !show);
+  exportOverlay.setAttribute("aria-hidden", show ? "false" : "true");
+}
+
+function applyExportState(exporting) {
+  isExporting = Boolean(exporting);
+  setExportOverlayVisible(isExporting);
+  if (isExporting) {
+    setBadge("loading");
+    setControlsEnabled(false);
+  } else if (!isPreparingDownshift && isPageEligible) {
+    setControlsEnabled(true);
+  }
+}
+
+function pushExportState(exporting) {
+  if (!activeTabId) return;
+  chrome.runtime.sendMessage(
+    { type: "drakonpitch:export-state-update", tabId: activeTabId, exporting: Boolean(exporting) },
+    () => {}
+  );
+}
+
+function refreshExportState(onDone) {
+  if (!activeTabId) {
+    onDone?.();
+    return;
+  }
+  chrome.runtime.sendMessage({ type: "drakonpitch:get-export-state", tabId: activeTabId }, (resp) => {
+    const bgExporting = !chrome.runtime.lastError && resp?.ok ? Boolean(resp.exporting) : false;
+    chrome.tabs.sendMessage(activeTabId, { type: "drakonpitch:get-export-status" }, (resp2) => {
+      const csExporting = !chrome.runtime.lastError && resp2?.ok ? Boolean(resp2.exporting) : false;
+      const exportingNow = bgExporting || csExporting;
+      if (exportingNow) {
+        exportStatePendingAck = false;
+        applyExportState(true);
+      } else if (!exportStatePendingAck) {
+        applyExportState(false);
+      }
+      onDone?.();
+    });
+  });
+}
+
 function setControlsEnabled(on) {
   slider.disabled = !on;
   resetBtn.disabled = !on;
+  if (downloadBtn) downloadBtn.disabled = !on;
   nudgeBtns.forEach((b) => {
     b.disabled = !on;
   });
@@ -146,10 +232,13 @@ chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
   const url = tab?.url || "";
 
   if (!url.startsWith("https://www.youtube.com/")) {
+    isPageEligible = false;
     setBadge("warn");
     setControlsEnabled(false);
+    applyExportState(false);
     return;
   }
+  isPageEligible = true;
 
   isPreparingDownshift = true;
   setBadge("loading");
@@ -163,7 +252,9 @@ chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         updateValueDisplay(t);
         lastCommittedTone = t;
       }
-      beginPrepareDownshiftLoop();
+      refreshExportState(() => {
+        if (!isExporting) beginPrepareDownshiftLoop();
+      });
     },
     onFailure: () => {
       setBadge("warn");
@@ -171,3 +262,8 @@ chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     }
   });
 });
+
+setInterval(() => {
+  if (!activeTabId) return;
+  refreshExportState();
+}, 1000);
