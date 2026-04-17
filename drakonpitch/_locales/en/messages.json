@@ -1,0 +1,22 @@
+{
+  "badge_active": { "message": "● ACTIVE" },
+  "badge_connecting": { "message": "● CONNECTING" },
+  "badge_standby": { "message": "● STANDBY" },
+  "badge_loading": { "message": "● LOADING" },
+  "current_pitch": { "message": "CURRENT PITCH" },
+  "scale_min": { "message": "-6 ST" },
+  "scale_original": { "message": "ORIGINAL" },
+  "scale_max": { "message": "+6 ST" },
+  "reset_engine": { "message": "RESET TONE" },
+  "export_mp3": { "message": "EXPORT MP3" },
+  "exporting_mp3": { "message": "EXPORTING MP3" },
+  "export_overlay_text": { "message": "Exporting MP3. Keep this tab open. Do not seek or pause the video to ensure perfect audio quality." },
+  "export_quality": { "message": "320KBPS HQ" },
+  "cancel_export": { "message": "CANCEL EXPORT" },
+  "remaining_suffix": { "message": "LEFT" },
+  "semitones": { "message": "semitones" },
+  "language": { "message": "Language" },
+  "lang_english": { "message": "English" },
+  "lang_vietnamese": { "message": "Vietnamese" },
+  "lang_japanese": { "message": "Japanese" }
+}

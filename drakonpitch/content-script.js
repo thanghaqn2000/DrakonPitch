@@ -9,6 +9,17 @@
   let currentTone = 0;
   let downshiftWarmupPromise = null;
   let exportInProgress = false;
+  let exportCancelRequested = false;
+  let exportProgressPercent = 0;
+  let exportEtaSec = null;
+  function setExportTelemetry(percent, etaSec) {
+    exportProgressPercent = Math.max(0, Math.min(100, Number(percent) || 0));
+    exportEtaSec = Number.isFinite(etaSec) ? Math.max(0, etaSec) : null;
+  }
+  function resetExportTelemetry() {
+    exportCancelRequested = false;
+    setExportTelemetry(0, null);
+  }
   function clampTone(n) {
     const step = 0.5;
     const rounded = Math.round(Number(n) / step) * step;
@@ -382,11 +393,12 @@
     );
 
     outputGain.connect(captureNode);
+    const savedRate = video.playbackRate;
+    const savedLoop = video.loop;
+    const savedTime = video.currentTime;
+    const wasPaused = video.paused;
     try {
-      const savedRate = video.playbackRate;
-      const savedLoop = video.loop;
-      const savedTime = video.currentTime;
-      const wasPaused = video.paused;
+      setExportTelemetry(0, Math.ceil(video.duration || 0));
       video.loop = false;
       video.playbackRate = 1;
       await waitVideoSeeked(video, 0);
@@ -402,34 +414,62 @@
         // Give enough margin for buffering; user can wait full playback.
         const estimated = Math.ceil(video.duration * 1000);
         const durMs = Math.min(12 * 60 * 60 * 1000, Math.max(120000, estimated + 30000));
-        const done = () => {
-          const endedEnough =
-            video.ended ||
-            (Number.isFinite(video.duration) && video.duration > 0 && video.currentTime >= video.duration - 0.05);
-          if (!endedEnough) return;
+        let settled = false;
+        let progressTimer;
+        let t;
+        const cleanup = () => {
+          if (settled) return;
+          settled = true;
+          clearInterval(progressTimer);
           clearTimeout(t);
-          video.removeEventListener("ended", done);
+          video.removeEventListener("ended", onEnded);
+          video.removeEventListener("pause", onPauseLike);
+          video.removeEventListener("emptied", onPauseLike);
+          video.removeEventListener("abort", onPauseLike);
+        };
+        const finish = () => {
+          cleanup();
+          setExportTelemetry(100, 0);
           resolve();
         };
-        const t = setTimeout(() => {
-          clearTimeout(t);
-          video.removeEventListener("ended", done);
+        progressTimer = setInterval(() => {
+          const dur = video.duration || 0;
+          const cur = Math.max(0, video.currentTime || 0);
+          if (dur > 0 && Number.isFinite(dur)) {
+            const percent = (cur / dur) * 100;
+            const remain = Math.max(0, Math.ceil(dur - cur));
+            setExportTelemetry(percent, remain);
+          }
+          if (exportCancelRequested) {
+            cleanup();
+            reject(new Error("Export cancelled by user"));
+            return;
+          }
+          if (
+            video.ended ||
+            (Number.isFinite(dur) && dur > 0 && cur >= dur - 0.05)
+          ) {
+            finish();
+          }
+        }, 200);
+        const onEnded = () => finish();
+        const onPauseLike = () => {
+          const dur = video.duration || 0;
+          const cur = video.currentTime || 0;
+          if (video.ended || (dur > 0 && cur >= dur - 0.25)) {
+            finish();
+          }
+        };
+        t = setTimeout(() => {
+          cleanup();
           reject(new Error("Timeout waiting for video end"));
         }, durMs);
-        video.addEventListener("ended", done);
-        if (video.ended) done();
+        video.addEventListener("ended", onEnded);
+        video.addEventListener("pause", onPauseLike);
+        video.addEventListener("emptied", onPauseLike);
+        video.addEventListener("abort", onPauseLike);
+        if (video.ended) finish();
       });
-
-      video.playbackRate = savedRate;
-      video.loop = savedLoop;
-      await waitVideoSeeked(video, savedTime);
-      if (wasPaused) {
-        video.pause();
-      } else {
-        try {
-          await video.play();
-        } catch (_) {}
-      }
     } finally {
       captureNode.onaudioprocess = null;
       try {
@@ -453,6 +493,31 @@
       sampleRate,
       channels
     });
+
+    // Restore video state asynchronously; do not block the download trigger.
+    (async () => {
+      try {
+        const live = findVideo();
+        if (!live || live !== video) return;
+        live.playbackRate = savedRate;
+        live.loop = savedLoop;
+        if (Number.isFinite(savedTime) && savedTime >= 0) {
+          try {
+            await waitVideoSeeked(live, savedTime);
+          } catch (_) {}
+        }
+        if (wasPaused) {
+          try {
+            live.pause();
+          } catch (_) {}
+        } else {
+          try {
+            await live.play();
+          } catch (_) {}
+        }
+      } catch (_) {}
+    })();
+
     return blob;
   }
 
@@ -686,6 +751,8 @@
   async function exportProcessedAudioMp3(semitones) {
     if (exportInProgress) throw new Error("Export is already running");
     exportInProgress = true;
+    exportCancelRequested = false;
+    setExportTelemetry(0, null);
     try {
       chrome.runtime?.sendMessage?.({ type: "drakonpitch:export-state-update", exporting: true }, () => {});
     } catch (_) {}
@@ -710,6 +777,7 @@
       console.log("[DrakonPitch][Export] ===== SUCCESS =====");
     } finally {
       exportInProgress = false;
+      resetExportTelemetry();
       try {
         chrome.runtime?.sendMessage?.({ type: "drakonpitch:export-state-update", exporting: false }, () => {});
       } catch (_) {}
@@ -813,10 +881,15 @@
               await exportProcessedAudioMp3(semitones);
               sendResponse({ ok: true, tone: currentTone });
             } catch (err) {
-              console.error("[DrakonPitch][Export] FAILED:", err);
+              const errText = String(err?.message != null ? err.message : err);
+              if (errText.toLowerCase().includes("cancel")) {
+                console.info("[DrakonPitch][Export] Cancelled by user");
+              } else {
+                console.error("[DrakonPitch][Export] FAILED:", err);
+              }
               sendResponse({
                 ok: false,
-                error: String(err?.message != null ? err.message : err)
+                error: errText
               });
             }
           });
@@ -827,7 +900,22 @@
         return false;
       }
       if (msg?.type === "drakonpitch:get-export-status") {
-        sendResponse({ ok: true, exporting: exportInProgress });
+        sendResponse({
+          ok: true,
+          exporting: exportInProgress,
+          progressPercent: exportProgressPercent,
+          etaSec: exportEtaSec,
+          canCancel: exportInProgress
+        });
+        return false;
+      }
+      if (msg?.type === "drakonpitch:cancel-export") {
+        if (!exportInProgress) {
+          sendResponse({ ok: false, error: "No export is currently running" });
+          return false;
+        }
+        exportCancelRequested = true;
+        sendResponse({ ok: true });
         return false;
       }
     });

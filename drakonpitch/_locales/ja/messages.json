@@ -1,0 +1,22 @@
+{
+  "badge_active": { "message": "● 有効" },
+  "badge_connecting": { "message": "● 接続中" },
+  "badge_standby": { "message": "● 待機" },
+  "badge_loading": { "message": "● 処理中" },
+  "current_pitch": { "message": "現在のピッチ" },
+  "scale_min": { "message": "-6 ST" },
+  "scale_original": { "message": "原音" },
+  "scale_max": { "message": "+6 ST" },
+  "reset_engine": { "message": "トーンをリセット" },
+  "export_mp3": { "message": "MP3を書き出し" },
+  "exporting_mp3": { "message": "MP3書き出し中" },
+  "export_overlay_text": { "message": "MP3を書き出し中です。録音中：このタブを閉じないでください。音飛びを防ぐため、シークや一時停止などの操作はお控えください。" },
+  "export_quality": { "message": "320KBPS HQ" },
+  "cancel_export": { "message": "書き出しを中止" },
+  "remaining_suffix": { "message": "残り" },
+  "semitones": { "message": "半音" },
+  "language": { "message": "言語" },
+  "lang_english": { "message": "英語" },
+  "lang_vietnamese": { "message": "ベトナム語" },
+  "lang_japanese": { "message": "日本語" }
+}

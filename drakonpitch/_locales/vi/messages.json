@@ -1,0 +1,22 @@
+{
+  "badge_active": { "message": "● ĐANG BẬT" },
+  "badge_connecting": { "message": "● ĐANG KẾT NỐI" },
+  "badge_standby": { "message": "● CHỜ" },
+  "badge_loading": { "message": "● ĐANG TẢI" },
+  "current_pitch": { "message": "TONE HIỆN TẠI" },
+  "scale_min": { "message": "-6 ST" },
+  "scale_original": { "message": "GỐC" },
+  "scale_max": { "message": "+6 ST" },
+  "reset_engine": { "message": "ĐẶT LẠI TONE" },
+  "export_mp3": { "message": "XUẤT MP3" },
+  "exporting_mp3": { "message": "ĐANG XUẤT MP3" },
+  "export_overlay_text": { "message": "Đang xuất file mp3, vui lòng giữ tab này mở và không tương tác với trình phát video (tua nhanh hoặc tạm dừng) để không ảnh hưởng đến file âm thanh." },
+  "export_quality": { "message": "320KBPS HQ" },
+  "cancel_export": { "message": "HỦY QUÁ TRÌNH" },
+  "remaining_suffix": { "message": "CÒN LẠI" },
+  "semitones": { "message": "cung" },
+  "language": { "message": "Ngôn ngữ" },
+  "lang_english": { "message": "Tiếng Anh" },
+  "lang_vietnamese": { "message": "Tiếng Việt" },
+  "lang_japanese": { "message": "Tiếng Nhật" }
+}

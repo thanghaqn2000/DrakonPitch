@@ -1,5 +1,6 @@
 {
   "manifest_version": 3,
+  "default_locale": "en",
   "name": "Drakon Pitch",
   "description": "Shift the pitch (tone) of YouTube audio in the tab you’re watching.",
   "version": "0.1.0",
@@ -25,7 +26,8 @@
   "permissions": [
     "scripting",
     "tabs",
-    "declarativeNetRequest"
+    "declarativeNetRequest",
+    "storage"
   ],
   "host_permissions": [
     "https://www.youtube.com/*",
