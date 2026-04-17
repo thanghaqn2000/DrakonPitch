@@ -266,6 +266,82 @@
         flex-shrink: 0;
       }
 
+      .btn-download {
+        margin-top: 6px;
+        width: 100%;
+        font-family: inherit;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        padding: 7px 8px;
+        border-radius: 8px;
+        border: 1px solid rgba(34, 197, 94, 0.42);
+        background: linear-gradient(180deg, rgba(20, 83, 45, 0.52) 0%, rgba(13, 48, 29, 0.9) 100%);
+        color: #ecfdf5;
+        cursor: pointer;
+      }
+
+      .btn-download:hover:not(:disabled) {
+        border-color: rgba(34, 197, 94, 0.62);
+      }
+
+      .btn-download:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+
+      .export-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(2, 6, 23, 0.82);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 20;
+        padding: 12px;
+      }
+
+      .export-overlay.hidden {
+        display: none;
+      }
+
+      .export-overlay-card {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid rgba(56, 189, 248, 0.34);
+        background: rgba(8, 15, 30, 0.96);
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+        padding: 12px 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 9px;
+      }
+
+      .export-spinner {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 2px solid rgba(56, 189, 248, 0.3);
+        border-top-color: #38bdf8;
+        animation: spin 0.9s linear infinite;
+      }
+
+      .export-text {
+        font-size: 10px;
+        line-height: 1.45;
+        font-weight: 700;
+        text-align: center;
+        color: #e2e8f0;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
     </style>
   </head>
   <body>
@@ -319,7 +395,14 @@
       </svg>
       RESET ENGINE
     </button>
+    <button type="button" id="downloadBtn" class="btn-download">EXPORT MP3</button>
 
+    <div id="exportOverlay" class="export-overlay hidden" aria-live="polite" aria-hidden="true">
+      <div class="export-overlay-card">
+        <div class="export-spinner" aria-hidden="true"></div>
+        <div class="export-text" lang="vi">Đang xuất file mp3, vui lòng xem hết video và không tua nhanh.</div>
+      </div>
+    </div>
     <script src="popup.js"></script>
   </body>
 </html>

@@ -24,10 +24,12 @@
   },
   "permissions": [
     "scripting",
-    "tabs"
+    "tabs",
+    "declarativeNetRequest"
   ],
   "host_permissions": [
-    "https://www.youtube.com/*"
+    "https://www.youtube.com/*",
+    "https://*.googlevideo.com/*"
   ],
   "content_scripts": [
     {

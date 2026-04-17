@@ -1,6 +1,17 @@
 (function initOrcaTuneAudioBridge() {
-  if (window.__orcaTuneAudioGraph) {
+  const existing = window.__orcaTuneAudioGraph;
+  if (existing && typeof existing.startRecordTap === "function") {
     return;
+  }
+  if (existing) {
+    try {
+      existing.disconnect?.().catch?.(() => {});
+    } catch (_) {}
+    try {
+      delete window.__orcaTuneAudioGraph;
+    } catch (_) {
+      window.__orcaTuneAudioGraph = undefined;
+    }
   }
 
   function getAssetUrl(path) {
@@ -30,6 +41,8 @@
       // Must be explicitly activated (user set non-zero tone) before any
       // audio capture happens. Prevents auto-capture on page load.
       this._activated = false;
+      /** @type {MediaStreamAudioDestinationNode | null} */
+      this._recordDestination = null;
     }
 
     async getWasmPayload() {
@@ -190,7 +203,34 @@
       }
     }
 
+    startRecordTap() {
+      if (!this.outputGainNode || !this.audioContext) {
+        throw new Error("Graph not ready for recording");
+      }
+      if (this._recordDestination) {
+        return this._recordDestination;
+      }
+      this._recordDestination = this.audioContext.createMediaStreamDestination();
+      this.outputGainNode.connect(this._recordDestination);
+      return this._recordDestination;
+    }
+
+    stopRecordTap() {
+      if (this._recordDestination && this.outputGainNode) {
+        try {
+          this.outputGainNode.disconnect(this._recordDestination);
+        } catch (_) {}
+      }
+      this._recordDestination = null;
+    }
+
     emergencyBypass() {
+      try {
+        if (this._recordDestination && this.outputGainNode) {
+          this.outputGainNode.disconnect(this._recordDestination);
+        }
+      } catch (_) {}
+      this._recordDestination = null;
       try {
         if (this.workletNode) this.workletNode.disconnect();
       } catch (_) {}
@@ -222,6 +262,7 @@
     }
 
     async disconnect() {
+      this.stopRecordTap();
       if (this.workletNode) {
         this.workletNode.port.postMessage({ type: "destroy" });
         this.workletNode.disconnect();
@@ -238,6 +279,7 @@
       this.video = null;
       this._downshiftPrepared = false;
       this._downshiftPreparePromise = null;
+      this._recordDestination = null;
       window.dispatchEvent(new CustomEvent("drakonpitch:warmup-reset"));
     }
   }
