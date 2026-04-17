@@ -86,6 +86,80 @@
         white-space: nowrap;
       }
 
+      .top-right {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .lang-switch {
+        position: relative;
+        flex-shrink: 0;
+      }
+
+      .lang-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        border: 1px solid rgba(56, 189, 248, 0.34);
+        background: rgba(9, 14, 28, 0.85);
+        color: #7dd3fc;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+
+      .lang-btn:hover {
+        border-color: rgba(56, 189, 248, 0.62);
+      }
+
+      .lang-btn svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      .lang-menu {
+        position: absolute;
+        top: 32px;
+        right: 0;
+        min-width: 110px;
+        border-radius: 8px;
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        background: rgba(7, 14, 28, 0.97);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+        overflow: hidden;
+        z-index: 25;
+      }
+
+      .lang-menu.hidden {
+        display: none;
+      }
+
+      .lang-option {
+        width: 100%;
+        border: 0;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+        background: transparent;
+        color: #e2e8f0;
+        font-family: inherit;
+        font-size: 10px;
+        font-weight: 700;
+        text-align: left;
+        padding: 7px 9px;
+        cursor: pointer;
+      }
+
+      .lang-option:last-child {
+        border-bottom: 0;
+      }
+
+      .lang-option:hover,
+      .lang-option.active {
+        background: rgba(56, 189, 248, 0.16);
+        color: #f8fafc;
+      }
+
       .wasm-badge.standby {
         border-color: rgba(148, 163, 184, 0.35);
         background: rgba(148, 163, 184, 0.08);
@@ -149,6 +223,7 @@
       }
 
       .pitch-slider {
+        appearance: none;
         -webkit-appearance: none;
         width: 100%;
         height: 4px;
@@ -308,38 +383,108 @@
 
       .export-overlay-card {
         width: 100%;
-        border-radius: 10px;
-        border: 1px solid rgba(56, 189, 248, 0.34);
-        background: rgba(8, 15, 30, 0.96);
+        border-radius: 18px;
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        background: rgba(7, 16, 36, 0.98);
         box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
-        padding: 12px 10px;
+        padding: 16px 14px 14px;
         display: flex;
         flex-direction: column;
+        gap: 12px;
+      }
+
+      .export-top {
+        display: flex;
         align-items: center;
-        gap: 9px;
+        justify-content: space-between;
       }
 
-      .export-spinner {
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        border: 2px solid rgba(56, 189, 248, 0.3);
-        border-top-color: #38bdf8;
-        animation: spin 0.9s linear infinite;
+      .export-top-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
 
-      .export-text {
+      .export-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        background: #ef4444;
+        box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+      }
+
+      .export-title {
         font-size: 10px;
+        font-weight: 800;
+        color: #22d3ee;
+        letter-spacing: 0.02em;
+      }
+
+      .export-percent {
+        font-size: 38px;
+        line-height: 1;
+        font-weight: 800;
+        color: #f8fafc;
+      }
+
+      .export-note {
+        border-left: 3px solid rgba(34, 211, 238, 0.65);
+        padding-left: 9px;
+        font-size: 9px;
         line-height: 1.45;
         font-weight: 700;
-        text-align: center;
-        color: #e2e8f0;
+        color: rgba(226, 232, 240, 0.9);
       }
 
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
+      .export-progress-track {
+        width: 100%;
+        height: 11px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.22);
+        overflow: hidden;
+      }
+
+      .export-progress-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #22d3ee 0%, #60a5fa 55%, #818cf8 100%);
+        transition: width 0.25s ease-out;
+      }
+
+      .export-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 9px;
+        line-height: 1;
+        font-weight: 700;
+        color: rgba(148, 163, 184, 0.95);
+      }
+
+      .export-cancel {
+        margin-top: 4px;
+        width: 100%;
+        font-family: inherit;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        padding: 10px 10px;
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: rgba(8, 16, 35, 0.8);
+        color: #94a3b8;
+        cursor: pointer;
+      }
+
+      .export-cancel:hover:not(:disabled) {
+        border-color: rgba(148, 163, 184, 0.55);
+        color: #cbd5e1;
+      }
+
+      .export-cancel:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
       }
 
     </style>
@@ -354,11 +499,28 @@
           <div class="title">DrakonPitch</div>
         </div>
       </div>
-      <div id="wasmBadge" class="wasm-badge standby">● STANDBY</div>
+      <div class="top-right">
+        <div id="wasmBadge" class="wasm-badge standby">● STANDBY</div>
+        <div class="lang-switch">
+          <button type="button" id="langBtn" class="lang-btn" aria-label="Language">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M3 12h18"></path>
+              <path d="M12 3a15 15 0 0 1 0 18"></path>
+              <path d="M12 3a15 15 0 0 0 0 18"></path>
+            </svg>
+          </button>
+          <div id="langMenu" class="lang-menu hidden">
+            <button type="button" class="lang-option" data-lang="en" data-i18n="lang_english">English</button>
+            <button type="button" class="lang-option" data-lang="vi" data-i18n="lang_vietnamese">Tiếng Việt</button>
+            <button type="button" class="lang-option" data-lang="ja" data-i18n="lang_japanese">日本語</button>
+          </div>
+        </div>
+      </div>
     </header>
 
     <section class="pitch-panel">
-      <div id="pitchLabel" class="current-label">CURRENT PITCH</div>
+      <div id="pitchLabel" class="current-label" data-i18n="current_pitch">CURRENT PITCH</div>
       <div class="pitch-big">
         <span id="pitchMain">0.0</span><span id="pitchUnit" class="pitch-st">st</span>
       </div>
@@ -376,9 +538,9 @@
         aria-labelledby="pitchLabel pitchMain pitchUnit"
       />
       <div class="scale">
-        <span>-6 ST</span>
-        <span class="original">ORIGINAL</span>
-        <span>+6 ST</span>
+        <span data-i18n="scale_min">-6 ST</span>
+        <span class="original" data-i18n="scale_original">ORIGINAL</span>
+        <span data-i18n="scale_max">+6 ST</span>
       </div>
       <div class="nudge-row">
         <button type="button" class="nudge" data-delta="-1" title="-1 semitone">[-1]</button>
@@ -393,14 +555,28 @@
         <path d="M3 12a9 9 0 1 0 3-7.1" />
         <path d="M3 3v6h6" />
       </svg>
-      RESET ENGINE
+      <span data-i18n="reset_engine">RESET ENGINE</span>
     </button>
-    <button type="button" id="downloadBtn" class="btn-download">EXPORT MP3</button>
+    <button type="button" id="downloadBtn" class="btn-download" data-i18n="export_mp3">EXPORT MP3</button>
 
     <div id="exportOverlay" class="export-overlay hidden" aria-live="polite" aria-hidden="true">
       <div class="export-overlay-card">
-        <div class="export-spinner" aria-hidden="true"></div>
-        <div class="export-text" lang="vi">Đang xuất file mp3, vui lòng xem hết video và không tua nhanh.</div>
+        <div class="export-top">
+          <div class="export-top-left">
+            <span class="export-dot" aria-hidden="true"></span>
+            <div class="export-title" data-i18n="exporting_mp3">EXPORTING MP3</div>
+          </div>
+          <div id="exportPercent" class="export-percent">0%</div>
+        </div>
+        <div id="exportText" class="export-note" data-i18n="export_overlay_text" lang="en">Exporting MP3. Please watch the full video and do not seek.</div>
+        <div class="export-progress-track">
+          <div id="exportProgressFill" class="export-progress-fill"></div>
+        </div>
+        <div class="export-meta">
+          <div id="exportEta">~00:00 LEFT</div>
+          <div data-i18n="export_quality">320KBPS HQ</div>
+        </div>
+        <button type="button" id="cancelExportBtn" class="export-cancel" data-i18n="cancel_export">CANCEL EXPORT</button>
       </div>
     </div>
     <script src="popup.js"></script>
