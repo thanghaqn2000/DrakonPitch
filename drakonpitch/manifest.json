@@ -51,6 +51,7 @@
       ],
       "resources": [
         "audio/orcatune-worklet.js",
+        "audio/export-capture-worklet.js",
         "wasm/orcatune_bungee.wasm",
         "wasm/orcatune_bungee.js"
       ]
