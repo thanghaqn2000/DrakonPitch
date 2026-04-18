@@ -98,6 +98,16 @@
     throw new Error("Runtime URL unavailable");
   }
 
+  const exportCaptureWorkletLoadedForContext = new WeakMap();
+  async function ensureExportCaptureWorklet(audioContext) {
+    if (!audioContext?.audioWorklet?.addModule) {
+      throw new Error("AudioWorklet is unavailable for export capture");
+    }
+    if (exportCaptureWorkletLoadedForContext.get(audioContext)) return;
+    await audioContext.audioWorklet.addModule(getRuntimeAssetUrl("audio/export-capture-worklet.js"));
+    exportCaptureWorkletLoadedForContext.set(audioContext, true);
+  }
+
   function formatLooksAudioCapable(f) {
     const m = (f?.mimeType || "").toLowerCase();
     if (m.startsWith("audio/")) return true;
@@ -361,18 +371,10 @@
     const encoder = new lame.Mp3Encoder(channels, sampleRate, 192);
     const mp3Chunks = [];
 
-    const captureNode = ctx.createScriptProcessor(4096, channels, channels);
-    const silentSink = ctx.createGain();
-    silentSink.gain.value = 0;
-    captureNode.connect(silentSink);
-    silentSink.connect(ctx.destination);
+    await ensureExportCaptureWorklet(ctx);
 
-    captureNode.onaudioprocess = (event) => {
-      const input = event.inputBuffer;
-      const frames = input.length;
+    const encodeFloatPcmBlock = (leftF, rightF, frames) => {
       if (frames <= 0) return;
-      const leftF = input.getChannelData(0);
-      const rightF = input.numberOfChannels > 1 ? input.getChannelData(1) : leftF;
       const left = new Int16Array(frames);
       const right = new Int16Array(frames);
       for (let i = 0; i < frames; i++) {
@@ -384,6 +386,34 @@
       const encoded = encoder.encodeBuffer(left, right);
       if (encoded?.length) mp3Chunks.push(new Uint8Array(encoded));
     };
+
+    let captureEncodeActive = true;
+    let flushDoneResolver;
+    const flushDonePromise = new Promise((resolve) => {
+      flushDoneResolver = resolve;
+    });
+
+    const captureNode = new AudioWorkletNode(ctx, "drakonpitch-export-capture", {
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
+      outputChannelCount: [2],
+      processorOptions: { bufferSize: 4096 }
+    });
+
+    captureNode.port.onmessage = (event) => {
+      const d = event.data;
+      if (!captureEncodeActive || !d) return;
+      if (d.type === "pcm" && d.left && d.right && Number.isFinite(d.frames) && d.frames > 0) {
+        encodeFloatPcmBlock(d.left, d.right, d.frames | 0);
+      } else if (d.type === "flush-done") {
+        flushDoneResolver?.();
+      }
+    };
+
+    const silentSink = ctx.createGain();
+    silentSink.gain.value = 0;
+    captureNode.connect(silentSink);
+    silentSink.connect(ctx.destination);
 
     const durMin = ((video.duration || 0) / 60).toFixed(1);
     console.log(
@@ -471,7 +501,17 @@
         if (video.ended) finish();
       });
     } finally {
-      captureNode.onaudioprocess = null;
+      try {
+        if (!exportCancelRequested) {
+          captureNode.port.postMessage({ type: "flush" });
+          await Promise.race([
+            flushDonePromise,
+            new Promise((resolve) => setTimeout(resolve, 1500))
+          ]);
+        }
+      } catch (_) {}
+      captureEncodeActive = false;
+      captureNode.port.onmessage = null;
       try {
         outputGain.disconnect(captureNode);
       } catch (_) {}
